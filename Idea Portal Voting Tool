@@ -1,0 +1,84 @@
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+const IdeaVotingTool = () => {
+  const [ideaNumber, setIdeaNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [ideaDetails, setIdeaDetails] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchIdeaDetails = async () => {
+    if (!ideaNumber) return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("https://getcake.aha.io/api/v1/idea_portals/6722168278024142733/portal_users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          portal_user: {
+            email: email,
+            first_name: firstName,
+            last_name: lastName
+          }
+        })
+      });
+
+      const userData = await response.json();
+
+      setIdeaDetails({ contactEmail: userData.portal_user.email });
+    } catch (err) {
+      setError("Failed to fetch user details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const voteOnIdea = async () => {
+    if (!ideaDetails) return;
+
+    try {
+      await fetch(`https://getcake.aha.io/api/v1/ideas/C-I-${ideaNumber}/endorsements?multiple_endorsements=true`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea_endorsement: { email: ideaDetails.contactEmail } })
+      });
+
+      alert("Vote added successfully!");
+    } catch (err) {
+      setError("Failed to add vote.");
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-md mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Idea Voting Tool</h1>
+      <input type="text" placeholder="Enter Idea Number" className="w-full p-2 mb-2 border rounded" value={ideaNumber} onChange={(e) => setIdeaNumber(e.target.value)} />
+      <input type="email" placeholder="Enter Your Email" className="w-full p-2 mb-2 border rounded" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input type="text" placeholder="First Name" className="w-full p-2 mb-2 border rounded" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+      <input type="text" placeholder="Last Name" className="w-full p-2 mb-4 border rounded" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+
+      <Button onClick={fetchIdeaDetails} disabled={loading}>
+        {loading ? "Loading..." : "Search Idea"}
+      </Button>
+
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+
+      {ideaDetails && (
+        <Card className="mt-4">
+          <CardContent>
+            <p><strong>Contact:</strong> {ideaDetails.contactEmail}</p>
+            <Button className="mt-2" onClick={voteOnIdea}>Vote</Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default IdeaVotingTool;
